@@ -485,7 +485,11 @@ const StrategicQuadrantsView = ({ data, theme }) => {
     );
 };
 const ProspectDetailView = ({ prospectInfo, onClose, theme }) => {
-    const { selected, contacts } = prospectInfo || {};
+    if (!prospectInfo) {
+        return null;
+    }
+
+    const { selected, contacts } = prospectInfo;
     const [activeContact, setActiveContact] = useState(selected);
     const [selectedMetric, setSelectedMetric] = useState(null);
 
@@ -493,8 +497,11 @@ const ProspectDetailView = ({ prospectInfo, onClose, theme }) => {
         setActiveContact(selected);
         setSelectedMetric(null); // Reset metric view when prospect changes
     }, [selected]);
-
-    if (!activeContact) return null;
+    
+    // This second check is crucial for when the component is fading out.
+    if (!activeContact) {
+        return null;
+    }
 
     const potential = Math.round((activeContact.fitScore * 0.7) + (activeContact.dealSize / 500000 * 100 * 0.3));
     const salesEffectiveness = Math.round((activeContact.callQualityScore * 0.6) + (activeContact.engagementScore * 0.4));
