@@ -2,23 +2,17 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 import { Users, Clock, Filter, RefreshCw, Download, Settings, Sun, Moon, Target, TrendingUp, PhoneCall, Eye, Grid, DollarSign, Mail, AlertCircle, ChevronRight, Calendar, X, Linkedin, Building, Mail as MailIcon, Phone as PhoneIcon, BarChart2, CheckCircle, Zap, ChevronDown } from 'lucide-react';
 
+// --- Helper Functions ---
+const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+
 // --- Mock Data Generation (utils/dataGenerator.js) ---
 const generateProspects = () => {
-    const companies = [
-        { name: 'Innovate Inc.', size: '50-200 Employees' }, 
-        { name: 'Quantum Solutions', size: '201-500 Employees' }, 
-        { name: 'Apex Dynamics', size: '1001-5000 Employees' }, 
-        { name: 'Stellar Corp.', size: '501-1000 Employees' }, 
-        { name: 'Zenith Labs', size: '1-10 Employees' },
-        { name: 'Momentum Co.', size: '11-50 Employees' }, 
-        { name: 'Synergy Systems', size: '5001-10,000 Employees' }, 
-        { name: 'Pinnacle Tech', size: '201-500 Employees' }, 
-        { name: 'FusionWorks', size: '50-200 Employees' }, 
-        { name: 'Evolve AI', size: '10,000+ Employees' }
-    ];
+    const companyNamePrefixes = ['Quantum', 'Stellar', 'Apex', 'Zenith', 'Momentum', 'Synergy', 'Pinnacle', 'Fusion', 'Evolve', 'Innovate', 'NextGen', 'BlueWave', 'Core', 'Vertex', 'Summit'];
+    const companyNameSuffixes = ['Solutions', 'Dynamics', 'Corp', 'Labs', 'Co', 'Systems', 'Tech', 'Works', 'AI', 'Inc.', 'Enterprises', 'Group', 'Global', 'Logic'];
+    
     const roles = ['CEO', 'CTO', 'COO', 'VP Sales', 'Director Marketing', 'CFO', 'VP Engineering', 'CMO'];
     const industries = ['Technology', 'Healthcare', 'Finance', 'Manufacturing', 'Retail', 'Energy', 'Telecom'];
-    const names = ['Alex Johnson', 'Maria Garcia', 'Chen Wei', 'Fatima Al-Fassi', 'David Smith', 'Yuki Tanaka', 'Amara Okoro', 'Liam O\'Connell', 'Sofia Rossi', 'Noah Williams'];
+    const names = ['Alex Johnson', 'Maria Garcia', 'Chen Wei', 'Fatima Al-Fassi', 'David Smith', 'Yuki Tanaka', 'Amara Okoro', 'Liam O\'Connell', 'Sofia Rossi', 'Noah Williams', 'Isabella Chen', 'James O\'Malley', 'Olivia Kim', 'Ben Carter', 'Sophia Rodriguez'];
     const reps = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
     const signalTypes = [
         { type: 'Page View', description: 'Viewed Pricing Page', icon: Eye },
@@ -38,47 +32,75 @@ const generateProspects = () => {
         return 'Negotiation';
     };
 
-    return Array.from({ length: 1000 }, (_, i) => {
-        const lastActivity = new Date();
-        const daysSince = Math.floor(Math.random() * 30);
-        lastActivity.setDate(lastActivity.getDate() - daysSince);
-        
-        const sourcedDate = new Date();
-        sourcedDate.setDate(sourcedDate.getDate() - Math.floor(Math.random() * 365));
+    const generateNormalRandom = () => (Math.random() + Math.random() + Math.random() + Math.random()) / 4;
 
-        const company = companies[i % companies.length];
-        const name = names[i % names.length];
+    let allProspects = [];
+    let prospectId = 1;
+    let companyCount = 400; // Generate around 400 companies
 
-        return {
-            id: i + 1,
-            name: name,
-            company: company.name,
-            companySize: company.size,
-            role: roles[i % roles.length],
-            industry: industries[i % industries.length],
-            email: `${name.toLowerCase().replace(' ', '.')}@${company.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-            phone: `+1-555-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 9000 + 1000)}`,
-            linkedinUrl: `https://linkedin.com/in/${name.toLowerCase().replace(' ', '')}`,
-            fitScore: Math.floor(Math.random() * 101),
-            engagementScore: Math.floor(Math.random() * 100),
-            intentScore: Math.floor(Math.random() * 100),
-            dealSize: Math.floor(Math.random() * 450000) + 50000,
-            daysInPipeline: Math.floor(Math.random() * 90),
-            lastActivity: lastActivity,
-            daysSinceLastActivity: daysSince,
-            sourcedDate: sourcedDate,
-            stage: getStage(),
-            callsMade: Math.floor(Math.random() * 20),
-            lastCallDuration: Math.floor(Math.random() * 45) + 5,
-            callQualityScore: Math.floor(Math.random() * 50) + 50,
-            salesRep: reps[i % reps.length],
-            signals: Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, j) => {
-                const signalDate = new Date();
-                signalDate.setDate(signalDate.getDate() - Math.floor(Math.random() * 30));
-                return { ...signalTypes[j % signalTypes.length], date: signalDate };
-            }).sort((a,b) => b.date - a.date),
+    for (let i = 0; i < companyCount; i++) {
+        const company = {
+            name: `${companyNamePrefixes[i % companyNamePrefixes.length]} ${companyNameSuffixes[i % companyNameSuffixes.length]}`,
+            size: '50-200 Employees' // Simplified for generation
         };
-    });
+
+        const numContacts = Math.floor(Math.random() * 4) + 1; // 1 to 4 contacts
+        for (let j = 0; j < numContacts; j++) {
+            if (prospectId > 1000) break; // Cap at 1000 prospects
+
+            const lastActivity = new Date();
+            const daysSince = Math.floor(Math.random() * 30);
+            lastActivity.setDate(lastActivity.getDate() - daysSince);
+            
+            const sourcedDate = new Date();
+            sourcedDate.setDate(sourcedDate.getDate() - Math.floor(Math.random() * 365));
+
+            const name = names[(prospectId -1 + j) % names.length];
+            const fitScore = Math.floor(generateNormalRandom() * 101);
+            const engagementScore = Math.floor(generateNormalRandom() * 101);
+            let intentScore;
+            const baseIntent = (fitScore + engagementScore) / 2;
+            const intentNoise = (Math.random() * 70) - 35;
+            intentScore = clamp(baseIntent + intentNoise, 0, 100);
+            if (Math.random() < 0.08) {
+                intentScore = Math.floor(Math.random() * 101);
+            }
+
+            allProspects.push({
+                id: prospectId,
+                name: name,
+                company: company.name,
+                companySize: company.size,
+                role: roles[(prospectId -1 + j) % roles.length],
+                industry: industries[(prospectId -1) % industries.length],
+                email: `${name.toLowerCase().replace(' ', '.')}@${company.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+                phone: `+1-555-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 9000 + 1000)}`,
+                linkedinUrl: `https://linkedin.com/in/${name.toLowerCase().replace(' ', '')}`,
+                fitScore: fitScore,
+                engagementScore: Math.round(engagementScore),
+                intentScore: Math.round(intentScore),
+                dealSize: Math.floor(Math.random() * 450000) + 50000,
+                daysInPipeline: Math.floor(Math.random() * 90),
+                lastActivity: lastActivity,
+                daysSinceLastActivity: daysSince,
+                sourcedDate: sourcedDate,
+                stage: getStage(),
+                callsMade: Math.floor(Math.random() * 20),
+                lastCallDuration: Math.floor(Math.random() * 45) + 5,
+                callQualityScore: Math.floor(Math.random() * 50) + 50,
+                salesRep: reps[(prospectId -1) % reps.length],
+                signals: Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, k) => {
+                    const signalDate = new Date();
+                    signalDate.setDate(signalDate.getDate() - Math.floor(Math.random() * 30));
+                    return { ...signalTypes[k % signalTypes.length], date: signalDate };
+                }).sort((a,b) => b.date - a.date),
+            });
+            prospectId++;
+        }
+        if (prospectId > 1000) break;
+    }
+
+    return allProspects;
 };
 
 const prospectsData = generateProspects();
@@ -123,6 +145,30 @@ const calculateSummaryMetrics = (prospects) => {
         stageBreakdown: stageBreakdown
     };
 };
+const generateFeatureImportance = (metric, prospect) => {
+    const isPositive = (value, threshold) => value >= threshold;
+    const features = {
+        Potential: [
+            { name: 'Role Seniority', value: prospect.role.includes('VP') || prospect.role.includes('CEO') ? 25 : 5, impact: isPositive(prospect.role.includes('VP') || prospect.role.includes('CEO'), 1) ? 'positive' : 'negative' },
+            { name: 'Industry Match (Tech)', value: prospect.industry === 'Technology' ? 20 : 2, impact: isPositive(prospect.industry === 'Technology', 1) ? 'positive' : 'negative' },
+            { name: 'Deal Size', value: (prospect.dealSize / 500000) * 15, impact: isPositive(prospect.dealSize, 250000) ? 'positive' : 'negative' },
+            { name: 'Company Size', value: 10, impact: 'positive' },
+        ],
+        'Sales Effectiveness': [
+            { name: 'Call Quality Score', value: (prospect.callQualityScore / 100) * 30, impact: isPositive(prospect.callQualityScore, 60) ? 'positive' : 'negative' },
+            { name: 'Engagement Score', value: (prospect.engagementScore / 100) * 25, impact: isPositive(prospect.engagementScore, 50) ? 'positive' : 'negative' },
+            { name: 'Recent Activity', value: (30 - prospect.daysSinceLastActivity) / 30 * 15, impact: isPositive(prospect.daysSinceLastActivity, 15) ? 'negative' : 'positive' },
+            { name: 'Calls Made', value: (prospect.callsMade / 20) * 10, impact: 'positive' },
+        ],
+        'Close Probability': [
+            { name: 'Hotness Score', value: (calculateHotnessScore(prospect) / 100) * 35, impact: isPositive(calculateHotnessScore(prospect), 65) ? 'positive' : 'negative' },
+            { name: 'Fit Score', value: (prospect.fitScore / 100) * 20, impact: isPositive(prospect.fitScore, 50) ? 'positive' : 'negative' },
+            { name: 'In Opportunity Stage', value: prospect.stage === 'Opportunity' || prospect.stage === 'Negotiation' ? 15 : 0, impact: 'positive' },
+            { name: 'Days in Pipeline', value: (90 - prospect.daysInPipeline) / 90 * 10, impact: isPositive(prospect.daysInPipeline, 60) ? 'negative' : 'positive' },
+        ]
+    };
+    return features[metric].sort((a, b) => b.value - a.value);
+};
 
 // --- Theme Definition (utils/theme.js) ---
 const getTheme = (isDarkMode) => ({
@@ -149,7 +195,7 @@ const SummaryCards = ({ data, theme }) => {
             <SummaryCard icon={<Users className="w-6 h-6 text-blue-500" />} title="Total Prospects" value={summary.totalProspects} theme={theme} />
             <SummaryCard icon={<Clock className="w-6 h-6 text-orange-500" />} title="Avg Last Activity" value={`${summary.avgLastActivity}d`} theme={theme} />
             
-            <SummaryCard icon={<Zap className="w-6 h-6 text-purple-500" />} title="Intent" theme={theme}>
+            <SummaryCard icon={<Zap className="w-5 h-5 text-purple-500" />} title="Intent" theme={theme}>
                 <div className="flex justify-around items-baseline pt-3">
                     {Object.entries(summary.intentBreakdown).map(([level, count]) => (
                         <div key={level} className="text-center px-1">
@@ -160,7 +206,7 @@ const SummaryCards = ({ data, theme }) => {
                 </div>
             </SummaryCard>
 
-            <SummaryCard icon={<TrendingUp className="w-6 h-6 text-pink-500" />} title="Stage" theme={theme}>
+            <SummaryCard icon={<TrendingUp className="w-5 h-5 text-pink-500" />} title="Stage" theme={theme}>
                  <div className="flex justify-around items-baseline pt-3">
                     {Object.entries(summary.stageBreakdown).map(([stage, count]) => (
                         <div key={stage} className="text-center px-1">
@@ -438,14 +484,64 @@ const StrategicQuadrantsView = ({ data, theme }) => {
         </ViewContainer>
     );
 };
-const ProspectDetailView = ({ prospect, onClose, theme }) => {
-    if (!prospect) return null;
-    const potential = Math.round((prospect.fitScore * 0.7) + (prospect.dealSize / 500000 * 100 * 0.3));
-    const salesEffectiveness = Math.round((prospect.callQualityScore * 0.6) + (prospect.engagementScore * 0.4));
-    const hotness = calculateHotnessScore(prospect);
+const ProspectDetailView = ({ prospectInfo, onClose, theme }) => {
+    const { selected, contacts } = prospectInfo || {};
+    const [activeContact, setActiveContact] = useState(selected);
+    const [selectedMetric, setSelectedMetric] = useState(null);
+
+    useEffect(() => {
+        setActiveContact(selected);
+        setSelectedMetric(null); // Reset metric view when prospect changes
+    }, [selected]);
+
+    if (!activeContact) return null;
+
+    const potential = Math.round((activeContact.fitScore * 0.7) + (activeContact.dealSize / 500000 * 100 * 0.3));
+    const salesEffectiveness = Math.round((activeContact.callQualityScore * 0.6) + (activeContact.engagementScore * 0.4));
+    const hotness = calculateHotnessScore(activeContact);
     const closeProbability = Math.round((potential * 0.4) + (salesEffectiveness * 0.3) + (hotness * 0.3));
-    const MetricGauge = ({ value, label, color }) => (
-        <div className="flex flex-col items-center">
+    
+    const getMetricColor = (value) => {
+        if (value >= 70) return '#10b981'; // green
+        if (value >= 40) return '#f59e0b'; // yellow/orange
+        return '#ef4444'; // red
+    };
+    
+    const handleContactChange = (e) => {
+        const selectedId = parseInt(e.target.value);
+        const newActiveContact = contacts.find(c => c.id === selectedId);
+        setActiveContact(newActiveContact);
+    };
+
+    const FeatureImportancePanel = ({ metric, prospect, onClosePanel }) => {
+        const features = generateFeatureImportance(metric, prospect);
+        return (
+            <div className={`absolute bottom-0 left-0 right-0 h-1/2 ${theme.bg.primary} border-t-2 ${theme.border.secondary} p-4 rounded-t-lg shadow-2xl flex flex-col`}>
+                <div className="flex justify-between items-center mb-2 flex-shrink-0">
+                    <h4 className={`text-lg font-semibold ${theme.text.primary}`}>Key Drivers for {metric}</h4>
+                    <button onClick={onClosePanel} className={`p-1 rounded-full hover:${theme.bg.hover}`}><X size={20} /></button>
+                </div>
+                <div className="flex-grow overflow-y-auto pr-2">
+                    <ul className="space-y-2">
+                        {features.map(feature => (
+                            <li key={feature.name} className="text-sm">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className={theme.text.secondary}>{feature.name}</span>
+                                    <span className={`font-bold ${feature.impact === 'positive' ? 'text-green-400' : 'text-red-400'}`}>{feature.value.toFixed(1)}%</span>
+                                </div>
+                                <div className={`w-full ${theme.bg.tertiary} rounded-full h-2`}>
+                                    <div className={`${feature.impact === 'positive' ? 'bg-green-500' : 'bg-red-500'} h-2 rounded-full`} style={{ width: `${clamp(feature.value, 0, 100)}%` }}></div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        );
+    };
+
+    const MetricGauge = ({ value, label, color, onMetricClick }) => (
+        <button onClick={() => onMetricClick(label)} className="flex flex-col items-center focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-2">
             <div style={{ width: 100, height: 100 }}>
                 <ResponsiveContainer>
                     <RadialBarChart innerRadius="70%" outerRadius="90%" data={[{ value }]} startAngle={90} endAngle={-270}>
@@ -456,7 +552,7 @@ const ProspectDetailView = ({ prospect, onClose, theme }) => {
                 </ResponsiveContainer>
             </div>
             <p className={`text-sm font-semibold mt-1 ${theme.text.secondary}`}>{label}</p>
-        </div>
+        </button>
     );
     const InfoItem = ({ icon: Icon, label, value, href }) => (
         <div className="flex items-start space-x-3">
@@ -472,28 +568,43 @@ const ProspectDetailView = ({ prospect, onClose, theme }) => {
         <div className={`fixed top-0 right-0 h-full w-full max-w-2xl ${theme.bg.secondary} shadow-2xl z-50 transform transition-transform translate-x-0`}>
             <div className="flex flex-col h-full">
                 <div className={`flex items-center justify-between p-4 border-b ${theme.border.primary} flex-shrink-0`}>
-                    <div><h2 className={`text-xl font-bold ${theme.text.primary}`}>{prospect.name}</h2><p className={`${theme.text.tertiary}`}>{prospect.role} at {prospect.company}</p></div>
+                    <div><h2 className={`text-xl font-bold ${theme.text.primary}`}>{activeContact.name}</h2><p className={`${theme.text.tertiary}`}>{activeContact.role} at {activeContact.company}</p></div>
                     <button onClick={onClose} className={`p-2 rounded-full hover:${theme.bg.hover}`}><X size={24} /></button>
                 </div>
-                <div className="flex-grow overflow-y-auto p-6">
+                <div className="flex-grow overflow-y-auto p-6 relative">
                     <div className={`p-4 rounded-lg ${theme.bg.primary} border ${theme.border.secondary}`}>
                         <h3 className={`text-lg font-semibold mb-4 ${theme.text.primary}`}>Overall Metrics</h3>
-                        <div className="flex justify-around"><MetricGauge value={potential} label="Potential" color="#3b82f6" /><MetricGauge value={salesEffectiveness} label="Sales Effectiveness" color="#8b5cf6" /><MetricGauge value={closeProbability} label="Close Probability" color="#10b981" /></div>
+                        <div className="flex justify-around">
+                            <MetricGauge value={potential} label="Potential" color={getMetricColor(potential)} onMetricClick={setSelectedMetric} />
+                            <MetricGauge value={salesEffectiveness} label="Sales Effectiveness" color={getMetricColor(salesEffectiveness)} onMetricClick={setSelectedMetric} />
+                            <MetricGauge value={closeProbability} label="Close Probability" color={getMetricColor(closeProbability)} onMetricClick={setSelectedMetric} />
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <div className={`p-4 rounded-lg ${theme.bg.primary} border ${theme.border.secondary}`}>
-                            <h3 className={`text-lg font-semibold mb-4 ${theme.text.primary}`}>Contact Details</h3>
-                            <div className="space-y-4"><InfoItem icon={MailIcon} label="Email" value={prospect.email} href={`mailto:${prospect.email}`} /><InfoItem icon={PhoneIcon} label="Phone" value={prospect.phone} href={`tel:${prospect.phone}`} /><InfoItem icon={Linkedin} label="LinkedIn" value="View Profile" href={prospect.linkedinUrl} /><InfoItem icon={Calendar} label="Last Interaction" value={prospect.lastActivity.toLocaleDateString()} /></div>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className={`text-lg font-semibold ${theme.text.primary}`}>Contact Details</h3>
+                                {contacts.length > 1 && (
+                                    <div className="relative">
+                                        <select value={activeContact.id} onChange={handleContactChange} className={`pl-3 pr-8 py-1 text-sm rounded-md appearance-none cursor-pointer ${theme.bg.tertiary} ${theme.text.secondary} border ${theme.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}>
+                                            {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                        <ChevronDown className={`w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${theme.text.tertiary}`} />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-4"><InfoItem icon={MailIcon} label="Email" value={activeContact.email} href={`mailto:${activeContact.email}`} /><InfoItem icon={PhoneIcon} label="Phone" value={activeContact.phone} href={`tel:${activeContact.phone}`} /><InfoItem icon={Linkedin} label="LinkedIn" value="View Profile" href={activeContact.linkedinUrl} /><InfoItem icon={Calendar} label="Last Interaction" value={activeContact.lastActivity.toLocaleDateString()} /></div>
                         </div>
                         <div className={`p-4 rounded-lg ${theme.bg.primary} border ${theme.border.secondary}`}>
                             <h3 className={`text-lg font-semibold mb-4 ${theme.text.primary}`}>Account Details</h3>
-                            <div className="space-y-4"><InfoItem icon={Building} label="Company" value={prospect.company} /><InfoItem icon={Users} label="Company Size" value={prospect.companySize} /><InfoItem icon={BarChart2} label="Industry" value={prospect.industry} /><InfoItem icon={TrendingUp} label="Pipeline Stage" value={prospect.stage} /></div>
+                            <div className="space-y-4"><InfoItem icon={Building} label="Company" value={activeContact.company} /><InfoItem icon={Users} label="Company Size" value={activeContact.companySize} /><InfoItem icon={BarChart2} label="Industry" value={activeContact.industry} /><InfoItem icon={TrendingUp} label="Pipeline Stage" value={activeContact.stage} /></div>
                         </div>
                     </div>
                     <div className={`p-4 mt-6 rounded-lg ${theme.bg.primary} border ${theme.border.secondary}`}>
                         <h3 className={`text-lg font-semibold mb-4 ${theme.text.primary}`}>Recent Signals</h3>
-                        <ul className="space-y-4">{prospect.signals.map((signal, index) => (<li key={index} className="flex items-start space-x-4"><div className={`p-2 rounded-full ${theme.bg.secondary} mt-1`}><signal.icon className={`w-5 h-5 ${theme.text.tertiary}`} /></div><div><p className={`${theme.text.primary}`}>{signal.description}</p><p className={`text-xs ${theme.text.tertiary}`}>{signal.date.toLocaleDateString()} &bull; {signal.type}</p></div></li>))}</ul>
+                        <ul className="space-y-4">{activeContact.signals.map((signal, index) => (<li key={index} className="flex items-start space-x-4"><div className={`p-2 rounded-full ${theme.bg.secondary} mt-1`}><signal.icon className={`w-5 h-5 ${theme.text.tertiary}`} /></div><div><p className={`${theme.text.primary}`}>{signal.description}</p><p className={`text-xs ${theme.text.tertiary}`}>{signal.date.toLocaleDateString()} &bull; {signal.type}</p></div></li>))}</ul>
                     </div>
+                    {selectedMetric && <FeatureImportancePanel metric={selectedMetric} prospect={activeContact} onClosePanel={() => setSelectedMetric(null)} />}
                 </div>
             </div>
         </div></>
@@ -555,12 +666,17 @@ const Dashboard = ({ selectedView, filteredProspects, theme, onProspectSelect, s
 export default function App() {
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [selectedView, setSelectedView] = useState('scatter');
-    const [selectedProspect, setSelectedProspect] = useState(null);
+    const [selectedProspectInfo, setSelectedProspectInfo] = useState(null);
     const [timePeriod, setTimePeriod] = useState('all'); // 30, 60, 90, 180, 365, 'all'
     const [selectedIntent, setSelectedIntent] = useState('All'); // All, High, Medium, Low
 
     const theme = getTheme(isDarkMode);
     const [prospects, setProspects] = useState(prospectsData);
+
+    const handleProspectSelect = (prospect) => {
+        const companyContacts = prospects.filter(p => p.company === prospect.company);
+        setSelectedProspectInfo({ selected: prospect, contacts: companyContacts });
+    };
 
     const filteredProspects = useMemo(() => {
         const now = new Date();
@@ -578,7 +694,7 @@ export default function App() {
     }, [prospects, timePeriod, selectedIntent]);
 
     useEffect(() => {
-        const handleEsc = (event) => { if (event.keyCode === 27) { setSelectedProspect(null); } };
+        const handleEsc = (event) => { if (event.keyCode === 27) { setSelectedProspectInfo(null); } };
         window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
     }, []);
@@ -588,10 +704,9 @@ export default function App() {
             <Header isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} theme={theme} timePeriod={timePeriod} setTimePeriod={setTimePeriod} />
             <div className="flex">
                 <Sidebar selectedView={selectedView} setSelectedView={setSelectedView} theme={theme} />
-                <Dashboard selectedView={selectedView} filteredProspects={filteredProspects} theme={theme} onProspectSelect={setSelectedProspect} selectedIntent={selectedIntent} setSelectedIntent={setSelectedIntent} />
+                <Dashboard selectedView={selectedView} filteredProspects={filteredProspects} theme={theme} onProspectSelect={handleProspectSelect} selectedIntent={selectedIntent} setSelectedIntent={setSelectedIntent} />
             </div>
-            <ProspectDetailView prospect={selectedProspect} onClose={() => setSelectedProspect(null)} theme={theme} />
+            <ProspectDetailView prospectInfo={selectedProspectInfo} onClose={() => setSelectedProspectInfo(null)} theme={theme} />
         </div>
     );
 }
-
